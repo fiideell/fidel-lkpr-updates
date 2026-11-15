@@ -3,8 +3,8 @@
 Modern dark aviation-themed updater for `zzz_fidel-lkpr-live-tailstrike-edition`.
 
 ## What's new
-- Uses your supplied LKPR night screenshot as the wide header image.
-- English / Czech language switch (saved between launches).
+- Uses your supplied LKPR night screenshot as the wider, taller airport header image with more runway/apron visible and a prominent FIDEL LKPR LIVE TAILSTRIKE EDITION title.
+- Polished 🇬🇧 EN / 🇨🇿 CZ flag-button language switch (saved between launches).
 - Updated dashboard layout with version cards, release notes, Community folder and clear status.
 - Existing GitHub Releases update flow, ZIP validation, manifest version check and timestamped backup are retained.
 

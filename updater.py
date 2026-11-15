@@ -194,8 +194,8 @@ class UpdaterApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(APP_NAME)
-        self.root.geometry("1050x760")
-        self.root.minsize(900, 680)
+        self.root.geometry("1100x790")
+        self.root.minsize(940, 700)
         self.root.configure(bg=BG)
         self.events: queue.Queue = queue.Queue()
         self.release = None
@@ -253,27 +253,42 @@ class UpdaterApp:
         shell = tk.Frame(self.root, bg=BG, padx=22, pady=20)
         shell.pack(fill="both", expand=True)
 
-        # Photo banner — the supplied LKPR screenshot is bundled into the app.
+        # Wide LKPR photo banner. The original airport screenshot is bundled in the EXE.
         self.banner_photo = tk.PhotoImage(file=str(resource_path("assets/lkpr_header.png")))
         banner = tk.Label(shell, image=self.banner_photo, bd=0, bg=BG, compound="center")
         banner.pack(fill="x")
-        overlay = tk.Frame(banner, bg="#101a2b")
-        overlay.place(x=24, y=22)
-        tk.Label(overlay, text="FIDEL ", font=("Segoe UI", 25, "bold"),
-                 fg=TEXT, bg="#101a2b").pack(side="left")
-        tk.Label(overlay, text="LKPR", font=("Segoe UI", 25, "bold"),
-                 fg=CYAN, bg="#101a2b").pack(side="left")
-        self.tagline_label = tk.Label(overlay, text=self.t("tagline"), font=("Segoe UI", 8, "bold"),
-                 fg="#d2deeb", bg="#101a2b")
-        self.tagline_label.pack(anchor="w", pady=(1, 0))
-        self.airport_label = tk.Label(banner, text=self.t("airport"), font=("Segoe UI", 9, "bold"),
-                 fg=TEXT, bg="#142033", padx=10, pady=6)
-        self.airport_label.place(relx=1.0, x=-18, y=24, anchor="ne")
-        self.lang_display = tk.StringVar(value="English" if self.language.get() == "en" else "Čeština")
-        self.lang_box = ttk.Combobox(shell, textvariable=self.lang_display, values=("English", "Čeština"),
-                                     state="readonly", width=10)
-        self.lang_box.pack(anchor="e", pady=(8, 10))
-        self.lang_box.bind("<<ComboboxSelected>>", self._language_changed)
+        overlay = tk.Frame(banner, bg="#091321")
+        overlay.place(x=28, y=28)
+        title_row = tk.Frame(overlay, bg="#091321")
+        title_row.pack(anchor="w")
+        tk.Label(title_row, text="FIDEL", font=("Segoe UI", 27, "bold"),
+                 fg=TEXT, bg="#091321").pack(side="left")
+        tk.Label(title_row, text=" LKPR", font=("Segoe UI", 27, "bold"),
+                 fg=CYAN, bg="#091321").pack(side="left")
+        self.edition_label = tk.Label(overlay, text="LIVE TAILSTRIKE EDITION",
+                 font=("Segoe UI", 13, "bold"), fg="#ffffff", bg="#091321")
+        self.edition_label.pack(anchor="w", pady=(1, 5))
+        self.tagline_label = tk.Label(overlay, text=self.t("tagline"),
+                 font=("Segoe UI", 8, "bold"), fg="#d2deeb", bg="#091321")
+        self.tagline_label.pack(anchor="w")
+        self.airport_label = tk.Label(banner, text=self.t("airport"),
+                 font=("Segoe UI", 9, "bold"), fg=TEXT, bg="#142033",
+                 padx=11, pady=7)
+        self.airport_label.place(relx=1.0, x=-20, y=22, anchor="ne")
+
+        # Compact flag buttons instead of the native ttk combobox.
+        self.lang_frame = tk.Frame(banner, bg="#101b2b",
+                                   highlightthickness=1, highlightbackground="#50647d")
+        self.lang_frame.place(relx=1.0, x=-20, y=75, anchor="ne")
+        self.lang_en = tk.Button(self.lang_frame, text="🇬🇧  EN",
+                 command=lambda: self._set_language("en"), font=("Segoe UI", 9, "bold"),
+                 relief="flat", bd=0, padx=12, pady=7, cursor="hand2")
+        self.lang_cs = tk.Button(self.lang_frame, text="🇨🇿  CZ",
+                 command=lambda: self._set_language("cs"), font=("Segoe UI", 9, "bold"),
+                 relief="flat", bd=0, padx=12, pady=7, cursor="hand2")
+        self.lang_en.pack(side="left")
+        self.lang_cs.pack(side="left")
+        self._style_language_buttons()
 
         heading = tk.Frame(shell, bg=BG)
         heading.pack(fill="x", pady=(4, 12))
@@ -367,16 +382,28 @@ class UpdaterApp:
                  fg=TEXT, bg=PANEL).pack(anchor="w", pady=(4, 0))
         return card
 
-    def _language_changed(self, _event=None):
-        self.lang_code = "en" if self.lang_display.get() == "English" else "cs"
-        self.language.set(self.lang_code)
+    def _set_language(self, code: str):
+        self.lang_code = code
+        self.language.set(code)
         self._save_settings()
+        self._style_language_buttons()
         self._rebuild_labels()
+
+    def _style_language_buttons(self):
+        selected_bg, idle_bg = "#087fb5", "#17263b"
+        for code, button in (("en", self.lang_en), ("cs", self.lang_cs)):
+            active = self.lang_code == code
+            button.configure(
+                bg=selected_bg if active else idle_bg,
+                fg="#ffffff" if active else "#b7c7d9",
+                activebackground="#0796d8" if active else "#263951",
+                activeforeground="#ffffff",
+            )
 
     def _rebuild_labels(self):
         # Rebuild only visible labels/buttons; state and background workers remain untouched.
         self.root.title(APP_NAME)
-        self.lang_display.set("English" if self.language.get() == "en" else "Čeština")
+        self._style_language_buttons()
         self.tagline_label.configure(text=self.t("tagline"))
         self.airport_label.configure(text=self.t("airport"))
         self.heading_label.configure(text=self.t("status_title"))
