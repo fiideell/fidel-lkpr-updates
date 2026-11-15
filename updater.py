@@ -6,7 +6,6 @@ import queue
 import re
 import shutil
 import threading
-import time
 import urllib.request
 import zipfile
 from datetime import datetime
@@ -20,9 +19,23 @@ ADDON_FOLDER = "zzz_fidel-lkpr-live-tailstrike-edition"
 ASSET_NAME = ADDON_FOLDER + ".zip"
 APP_NAME = "Fidel LKPR Updater"
 API_URL = f"https://api.github.com/repos/{OWNER}/{REPO}/releases/latest"
-USER_AGENT = "Fidel-LKPR-Updater/1.0"
+USER_AGENT = "Fidel-LKPR-Updater/2.0"
 APP_DATA = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "FidelLKPRUpdater"
 SETTINGS_FILE = APP_DATA / "settings.json"
+BG = "#0b1220"
+PANEL = "#121e30"
+PANEL2 = "#17263b"
+BORDER = "#263951"
+TEXT = "#f2f6fb"
+MUTED = "#9aacc2"
+CYAN = "#56c8f2"
+GREEN = "#50d6a0"
+
+
+def resource_path(relative: str) -> Path:
+    import sys
+    root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return root / relative
 
 
 def version_tuple(value: str) -> tuple[int, ...]:
@@ -39,6 +52,13 @@ def read_local_version(community: Path) -> str | None:
         return None
 
 
+def safe_is_dir(path: Path) -> bool:
+    try:
+        return path.is_dir()
+    except (OSError, PermissionError):
+        return False
+
+
 def candidate_community_paths() -> list[Path]:
     local = Path(os.environ.get("LOCALAPPDATA", Path.home()))
     roaming = Path(os.environ.get("APPDATA", Path.home()))
@@ -48,8 +68,6 @@ def candidate_community_paths() -> list[Path]:
         local / "Packages/Microsoft.FlightSimulator_8wekyb3d8bbwe/LocalCache/Packages/Community",
         roaming / "Microsoft Flight Simulator/Packages/Community",
     ]
-
-    # MSFS can use a custom package directory recorded in UserCfg.opt.
     cfg_candidates = [
         local / "Packages/Microsoft.Limitless_8wekyb3d8bbwe/LocalCache/UserCfg.opt",
         local / "Packages/Microsoft.FlightSimulator_8wekyb3d8bbwe/LocalCache/UserCfg.opt",
@@ -64,170 +82,151 @@ def candidate_community_paths() -> list[Path]:
                 candidates.insert(0, Path(match.group(1)) / "Community")
         except OSError:
             pass
-
-    result = []
-    seen = set()
+    result, seen = [], set()
     for path in candidates:
         key = str(path).lower()
-        if key not in seen and path.is_dir():
+        if key not in seen and safe_is_dir(path):
             seen.add(key)
             result.append(path)
     return result
 
 
 def request_json(url: str) -> dict:
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": USER_AGENT,
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json",
+        "User-Agent": USER_AGENT,
+        "X-GitHub-Api-Version": "2022-11-28",
+    })
     with urllib.request.urlopen(req, timeout=25) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
 class UpdaterApp:
+    STRINGS = {
+        "en": {
+            "tagline": "SCENERY UPDATER  •  MICROSOFT FLIGHT SIMULATOR",
+            "airport": "VÁCLAV HAVEL AIRPORT PRAGUE  •  LKPR",
+            "overview": "OVERVIEW", "status_title": "SCENERY STATUS",
+            "installed": "Installed version", "latest": "Latest version",
+            "checking": "Checking…", "not_installed": "Not installed",
+            "connected": "Connected to GitHub Releases",
+            "loading": "Loading release information…",
+            "notes": "LATEST RELEASE",
+            "community": "COMMUNITY FOLDER", "browse": "Browse…",
+            "check": "Check for Updates", "install": "Download and Install",
+            "footer": "FIDEL LKPR  |  MSFS 2020 / 2024  |  by Fidel",
+            "startup": "Connecting to GitHub…",
+            "checking_status": "Checking for the latest version…",
+            "no_addon": "Scenery not found — ready for a first installation.",
+            "update": "A new version is available. Time to update! ✈",
+            "uptodate": "You are up to date.",
+            "done": "Done! Scenery updated to {version}.",
+            "failed_status": "Something went wrong.",
+            "check_failed": "Update check failed: {error}",
+            "bad_version": "Invalid version number in GitHub Release: {tag!r}",
+            "missing_asset": "GitHub Release {tag} is missing {asset}.",
+            "community_title": "Community folder",
+            "choose_valid": "Please select a valid Community folder first.",
+            "update_title": "Update",
+            "check_first": "Check for updates first.",
+            "confirm_title": "Confirm installation",
+            "confirm": "Please completely close MSFS before continuing.\n\n"
+                       "The updater will replace only this scenery folder:\n{folder}\n\n"
+                       "Your previous version will be kept as a backup. Continue?",
+            "zip_bad": "The ZIP archive is damaged (file {name}).",
+            "zip_structure": "The ZIP does not have the expected safe folder structure.",
+            "version_mismatch": "The version in the ZIP ({actual}) does not match the release ({expected}).",
+            "install_failed": "Installation failed: {error}",
+            "success_title": "Installation complete",
+            "success": "Version {version} was installed successfully.",
+            "backup": "\n\nBackup of the previous version:\n{path}",
+            "no_notes": "No release notes were provided.",
+            "status_ok": "You are up to date",
+            "status_new": "Update available",
+            "status_missing": "Ready for first install",
+            "select_title": "Select the MSFS Community folder",
+        },
+        "cs": {
+            "tagline": "AKTUALIZÁTOR SCENÉRIE  •  MICROSOFT FLIGHT SIMULATOR",
+            "airport": "LETIŠTĚ VÁCLAVA HAVLA PRAHA  •  LKPR",
+            "overview": "PŘEHLED", "status_title": "STAV SCENÉRIE",
+            "installed": "Nainstalovaná verze", "latest": "Nejnovější verze",
+            "checking": "Kontroluji…", "not_installed": "Nenainstalováno",
+            "connected": "Připojeno ke GitHub Releases",
+            "loading": "Načítám informace o vydání…",
+            "notes": "POSLEDNÍ VYDÁNÍ",
+            "community": "SLOŽKA COMMUNITY", "browse": "Vybrat…",
+            "check": "Zkontrolovat aktualizace", "install": "Stáhnout a nainstalovat",
+            "footer": "FIDEL LKPR  |  MSFS 2020 / 2024  |  vytvořil Fidel",
+            "startup": "Připojuji se ke GitHubu…",
+            "checking_status": "Kontroluji nejnovější verzi…",
+            "no_addon": "Scenérie nebyla nalezena — připravena k první instalaci.",
+            "update": "Je dostupná nová verze. Čas na update! ✈",
+            "uptodate": "Máš aktuální verzi scenérie.",
+            "done": "Hotovo! Scenérie byla aktualizována na {version}.",
+            "failed_status": "Něco se nepovedlo.",
+            "check_failed": "Kontrola aktualizací selhala: {error}",
+            "bad_version": "Neplatné číslo verze v GitHub Release: {tag!r}",
+            "missing_asset": "V GitHub Release {tag} chybí soubor {asset}.",
+            "community_title": "Složka Community",
+            "choose_valid": "Nejdřív vyber platnou složku Community.",
+            "update_title": "Aktualizace",
+            "check_first": "Nejdřív zkontroluj dostupné aktualizace.",
+            "confirm_title": "Potvrdit instalaci",
+            "confirm": "Před pokračováním úplně zavři MSFS.\n\n"
+                       "Updater nahradí pouze tuto složku scenérie:\n{folder}\n\n"
+                       "Původní verzi ponechá jako zálohu. Pokračovat?",
+            "zip_bad": "ZIP archiv je poškozený (soubor {name}).",
+            "zip_structure": "ZIP nemá očekávanou bezpečnou strukturu.",
+            "version_mismatch": "Verze v ZIPu ({actual}) neodpovídá vydání ({expected}).",
+            "install_failed": "Instalace selhala: {error}",
+            "success_title": "Instalace dokončena",
+            "success": "Instalace verze {version} proběhla úspěšně.",
+            "backup": "\n\nZáloha původní verze:\n{path}",
+            "no_notes": "K tomuto vydání nejsou připojené poznámky.",
+            "status_ok": "Máš aktuální verzi",
+            "status_new": "Dostupná aktualizace",
+            "status_missing": "Připraveno k první instalaci",
+            "select_title": "Vyber MSFS složku Community",
+        },
+    }
+
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(APP_NAME)
-        self.root.geometry("700x520")
-        self.root.minsize(640, 480)
-        self.root.configure(bg="#101827")
+        self.root.geometry("1050x760")
+        self.root.minsize(900, 680)
+        self.root.configure(bg=BG)
         self.events: queue.Queue = queue.Queue()
-        self.release: dict | None = None
-        self.asset: dict | None = None
+        self.release = None
+        self.asset = None
         self.community = tk.StringVar()
-        self.local_version = tk.StringVar(value="Nenainstalováno / nezjištěno")
-        self.remote_version = tk.StringVar(value="Kontroluji…")
-        self.status = tk.StringVar(value="Připojuji se ke GitHubu…")
-        self.release_notes = tk.StringVar(value="Načítám informace o vydání…")
+        self.language = tk.StringVar(value="en")
+        self.lang_code = "en"
+        self.local_version = tk.StringVar(value="—")
+        self.remote_version = tk.StringVar(value="—")
+        self.status = tk.StringVar(value=self.t("startup"))
         self.install_button = None
-        self.progress = None
-
+        self.card_label_widgets = {}
         self._load_settings()
         self._build_ui()
         self._refresh_local_version()
         self.root.after(150, self._poll_events)
         self.check_updates()
 
-    def _build_ui(self):
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure(
-            "Horizontal.TProgressbar",
-            troughcolor="#263449",
-            background="#42b4e8",
-            bordercolor="#263449",
-            lightcolor="#42b4e8",
-            darkcolor="#42b4e8",
-        )
-
-        outer = tk.Frame(self.root, bg="#101827", padx=26, pady=22)
-        outer.pack(fill="both", expand=True)
-
-        header = tk.Frame(outer, bg="#101827")
-        header.pack(fill="x")
-        mark = tk.Label(
-            header, text="✈", font=("Segoe UI Symbol", 30),
-            fg="#57c5f2", bg="#101827"
-        )
-        mark.pack(side="left", padx=(0, 13))
-        title_box = tk.Frame(header, bg="#101827")
-        title_box.pack(side="left", fill="x", expand=True)
-        tk.Label(
-            title_box, text="FIDEL LKPR", font=("Segoe UI", 20, "bold"),
-            fg="#f3f7fb", bg="#101827"
-        ).pack(anchor="w")
-        tk.Label(
-            title_box, text="SCENERY UPDATER  •  MICROSOFT FLIGHT SIMULATOR",
-            font=("Segoe UI", 8, "bold"), fg="#8da4bd", bg="#101827"
-        ).pack(anchor="w", pady=(2, 0))
-
-        tk.Frame(outer, bg="#2a3b51", height=1).pack(fill="x", pady=20)
-
-        card = tk.Frame(outer, bg="#19263a", padx=18, pady=16)
-        card.pack(fill="x")
-        tk.Label(card, text="STAV INSTALACE", font=("Segoe UI", 9, "bold"),
-                 fg="#8da4bd", bg="#19263a").pack(anchor="w")
-        self._info_row(card, "Nainstalovaná verze", self.local_version)
-        self._info_row(card, "Dostupná verze", self.remote_version)
-
-        tk.Label(outer, textvariable=self.status, font=("Segoe UI", 11, "bold"),
-                 fg="#57c5f2", bg="#101827", anchor="w").pack(fill="x", pady=(18, 7))
-
-        notes_frame = tk.Frame(outer, bg="#19263a", padx=16, pady=12)
-        notes_frame.pack(fill="both", expand=True)
-        tk.Label(notes_frame, text="POZNÁMKY K VYDÁNÍ", font=("Segoe UI", 8, "bold"),
-                 fg="#8da4bd", bg="#19263a").pack(anchor="w")
-        self.notes_text = tk.Text(
-            notes_frame, height=5, wrap="word", relief="flat",
-            bg="#19263a", fg="#d8e3ef", insertbackground="#d8e3ef",
-            font=("Segoe UI", 9), padx=0, pady=8
-        )
-        self.notes_text.pack(fill="both", expand=True)
-        self.notes_text.insert("1.0", "Načítám informace o vydání…")
-        self.notes_text.configure(state="disabled")
-
-        path_frame = tk.Frame(outer, bg="#101827")
-        path_frame.pack(fill="x", pady=(16, 0))
-        tk.Label(path_frame, text="Community složka", font=("Segoe UI", 9, "bold"),
-                 fg="#8da4bd", bg="#101827").pack(anchor="w", pady=(0, 6))
-        path_row = tk.Frame(path_frame, bg="#101827")
-        path_row.pack(fill="x")
-        self.path_entry = tk.Entry(
-            path_row, textvariable=self.community, relief="flat",
-            bg="#19263a", fg="#e6eef7", insertbackground="#ffffff",
-            font=("Segoe UI", 9)
-        )
-        self.path_entry.pack(side="left", fill="x", expand=True, ipady=8)
-        tk.Button(
-            path_row, text="Vybrat…", command=self.browse_community,
-            bg="#2a3b51", fg="#ffffff", activebackground="#3b526f",
-            activeforeground="#ffffff", relief="flat", padx=14, pady=7,
-            cursor="hand2"
-        ).pack(side="left", padx=(8, 0))
-
-        self.progress = ttk.Progressbar(outer, mode="indeterminate")
-        self.progress.pack(fill="x", pady=(16, 0))
-
-        buttons = tk.Frame(outer, bg="#101827")
-        buttons.pack(fill="x", pady=(14, 0))
-        tk.Button(
-            buttons, text="Zkontrolovat aktualizace", command=self.check_updates,
-            bg="#2a3b51", fg="#ffffff", activebackground="#3b526f",
-            activeforeground="#ffffff", relief="flat", padx=16, pady=11,
-            cursor="hand2"
-        ).pack(side="left")
-        self.install_button = tk.Button(
-            buttons, text="Stáhnout a nainstalovat", command=self.install_update,
-            bg="#087db4", fg="#ffffff", activebackground="#0796d8",
-            activeforeground="#ffffff", relief="flat", padx=18, pady=11,
-            cursor="hand2", state="disabled"
-        )
-        self.install_button.pack(side="right")
-
-        tk.Label(
-            outer, text="Aktualizace jsou distribuovány přes GitHub Releases.",
-            font=("Segoe UI", 8), fg="#71869e", bg="#101827"
-        ).pack(anchor="w", pady=(13, 0))
-
-    @staticmethod
-    def _info_row(parent, label, variable):
-        row = tk.Frame(parent, bg="#19263a")
-        row.pack(fill="x", pady=(10, 0))
-        tk.Label(row, text=label, font=("Segoe UI", 9), fg="#aabbd0",
-                 bg="#19263a").pack(side="left")
-        tk.Label(row, textvariable=variable, font=("Segoe UI", 10, "bold"),
-                 fg="#f3f7fb", bg="#19263a").pack(side="right")
+    def t(self, key: str) -> str:
+        return self.STRINGS[self.lang_code].get(key, key)
 
     def _load_settings(self):
         try:
             data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
             saved = data.get("community")
-            if saved and Path(saved).is_dir():
+            if saved and safe_is_dir(Path(saved)):
                 self.community.set(saved)
+            lang = data.get("language")
+            if lang in ("en", "cs"):
+                self.language.set(lang)
+                self.lang_code = lang
         except (OSError, json.JSONDecodeError, AttributeError):
             pass
         if not self.community.get():
@@ -238,25 +237,192 @@ class UpdaterApp:
     def _save_settings(self):
         try:
             APP_DATA.mkdir(parents=True, exist_ok=True)
-            SETTINGS_FILE.write_text(
-                json.dumps({"community": self.community.get()}, indent=2),
-                encoding="utf-8",
-            )
+            SETTINGS_FILE.write_text(json.dumps({
+                "community": self.community.get(), "language": self.language.get()
+            }, indent=2), encoding="utf-8")
         except OSError:
             pass
+
+    def _build_ui(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Horizontal.TProgressbar", troughcolor="#203047",
+                        background=CYAN, bordercolor="#203047",
+                        lightcolor=CYAN, darkcolor=CYAN)
+
+        shell = tk.Frame(self.root, bg=BG, padx=22, pady=20)
+        shell.pack(fill="both", expand=True)
+
+        # Photo banner — the supplied LKPR screenshot is bundled into the app.
+        self.banner_photo = tk.PhotoImage(file=str(resource_path("assets/lkpr_header.png")))
+        banner = tk.Label(shell, image=self.banner_photo, bd=0, bg=BG, compound="center")
+        banner.pack(fill="x")
+        overlay = tk.Frame(banner, bg="#101a2b")
+        overlay.place(x=24, y=22)
+        tk.Label(overlay, text="FIDEL ", font=("Segoe UI", 25, "bold"),
+                 fg=TEXT, bg="#101a2b").pack(side="left")
+        tk.Label(overlay, text="LKPR", font=("Segoe UI", 25, "bold"),
+                 fg=CYAN, bg="#101a2b").pack(side="left")
+        self.tagline_label = tk.Label(overlay, text=self.t("tagline"), font=("Segoe UI", 8, "bold"),
+                 fg="#d2deeb", bg="#101a2b")
+        self.tagline_label.pack(anchor="w", pady=(1, 0))
+        self.airport_label = tk.Label(banner, text=self.t("airport"), font=("Segoe UI", 9, "bold"),
+                 fg=TEXT, bg="#142033", padx=10, pady=6)
+        self.airport_label.place(relx=1.0, x=-18, y=24, anchor="ne")
+        self.lang_display = tk.StringVar(value="English" if self.language.get() == "en" else "Čeština")
+        self.lang_box = ttk.Combobox(shell, textvariable=self.lang_display, values=("English", "Čeština"),
+                                     state="readonly", width=10)
+        self.lang_box.pack(anchor="e", pady=(8, 10))
+        self.lang_box.bind("<<ComboboxSelected>>", self._language_changed)
+
+        heading = tk.Frame(shell, bg=BG)
+        heading.pack(fill="x", pady=(4, 12))
+        tk.Label(heading, text="▤", font=("Segoe UI Symbol", 18),
+                 fg=CYAN, bg=BG).pack(side="left", padx=(0, 9))
+        self.heading_label = tk.Label(heading, text=self.t("status_title"), font=("Segoe UI", 12, "bold"),
+                 fg=TEXT, bg=BG)
+        self.heading_label.pack(side="left")
+
+        cards = tk.Frame(shell, bg=BG)
+        cards.pack(fill="x")
+        self.installed_card = self._version_card(cards, "installed", self.local_version)
+        self.installed_card.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        self.latest_card = self._version_card(cards, "latest", self.remote_version)
+        self.latest_card.pack(side="left", fill="both", expand=True, padx=(8, 0))
+
+        self.status_panel = tk.Frame(shell, bg=PANEL, highlightthickness=1,
+                                     highlightbackground=BORDER, padx=16, pady=12)
+        self.status_panel.pack(fill="x", pady=(12, 12))
+        self.status_icon = tk.Label(self.status_panel, text="●", font=("Segoe UI", 18, "bold"),
+                                    fg=CYAN, bg=PANEL)
+        self.status_icon.pack(side="left", padx=(0, 12))
+        self.status_label = tk.Label(self.status_panel, textvariable=self.status,
+                                     font=("Segoe UI", 11, "bold"), fg=CYAN,
+                                     bg=PANEL, anchor="w")
+        self.status_label.pack(side="left", fill="x", expand=True)
+
+        notes = tk.Frame(shell, bg=PANEL, highlightthickness=1,
+                         highlightbackground=BORDER, padx=16, pady=12)
+        notes.pack(fill="both", expand=True)
+        self.notes_heading = tk.Label(notes, text=self.t("notes"), font=("Segoe UI", 8, "bold"),
+                 fg=MUTED, bg=PANEL)
+        self.notes_heading.pack(anchor="w")
+        self.notes_text = tk.Text(notes, height=5, wrap="word", relief="flat",
+                                  bg=PANEL, fg="#d8e3ef", insertbackground=TEXT,
+                                  font=("Segoe UI", 9), padx=0, pady=8,
+                                  highlightthickness=0)
+        self.notes_text.pack(fill="both", expand=True)
+        self.notes_text.insert("1.0", self.t("loading"))
+        self.notes_text.configure(state="disabled")
+
+        pathbox = tk.Frame(shell, bg=BG)
+        pathbox.pack(fill="x", pady=(14, 0))
+        self.community_heading = tk.Label(pathbox, text=self.t("community"), font=("Segoe UI", 8, "bold"),
+                 fg=MUTED, bg=BG)
+        self.community_heading.pack(anchor="w", pady=(0, 6))
+        row = tk.Frame(pathbox, bg=BG)
+        row.pack(fill="x")
+        self.path_entry = tk.Entry(row, textvariable=self.community, relief="flat",
+                                   bg=PANEL2, fg=TEXT, insertbackground=TEXT,
+                                   font=("Segoe UI", 9), bd=0)
+        self.path_entry.pack(side="left", fill="x", expand=True, ipady=10)
+        self.browse_button = tk.Button(row, text=self.t("browse"), command=self.browse_community,
+                                       bg=PANEL2, fg=TEXT, activebackground=BORDER,
+                                       activeforeground=TEXT, relief="flat", padx=16,
+                                       pady=8, cursor="hand2")
+        self.browse_button.pack(side="left", padx=(8, 0))
+
+        self.progress = ttk.Progressbar(shell, mode="indeterminate")
+        self.progress.pack(fill="x", pady=(14, 0))
+        actions = tk.Frame(shell, bg=BG)
+        actions.pack(fill="x", pady=(14, 0))
+        self.check_button = tk.Button(actions, text=self.t("check"), command=self.check_updates,
+                                      bg=PANEL2, fg=TEXT, activebackground=BORDER,
+                                      activeforeground=TEXT, relief="flat", padx=18,
+                                      pady=12, cursor="hand2")
+        self.check_button.pack(side="left")
+        self.install_button = tk.Button(actions, text=self.t("install"),
+                                        command=self.install_update, bg="#087db4",
+                                        fg="#ffffff", activebackground="#0796d8",
+                                        activeforeground="#ffffff", relief="flat",
+                                        padx=20, pady=12, cursor="hand2", state="disabled")
+        self.install_button.pack(side="right")
+        foot = tk.Frame(shell, bg=BG)
+        foot.pack(fill="x", pady=(13, 0))
+        self.connection_label = tk.Label(foot, text="●  " + self.t("connected"),
+                                         font=("Segoe UI", 8), fg=GREEN, bg=BG)
+        self.connection_label.pack(side="left")
+        self.footer_label = tk.Label(foot, text=self.t("footer"),
+                                     font=("Segoe UI", 8), fg="#70839b", bg=BG)
+        self.footer_label.pack(side="right")
+
+    def _version_card(self, parent, label_key, variable):
+        card = tk.Frame(parent, bg=PANEL, highlightthickness=1,
+                        highlightbackground=BORDER, padx=16, pady=13)
+        label_widget = tk.Label(card, text=self.t(label_key), font=("Segoe UI", 8, "bold"),
+                                fg=MUTED, bg=PANEL)
+        label_widget.pack(anchor="w")
+        self.card_label_widgets[label_key] = label_widget
+        tk.Label(card, textvariable=variable, font=("Segoe UI", 23, "bold"),
+                 fg=TEXT, bg=PANEL).pack(anchor="w", pady=(4, 0))
+        return card
+
+    def _language_changed(self, _event=None):
+        self.lang_code = "en" if self.lang_display.get() == "English" else "cs"
+        self.language.set(self.lang_code)
+        self._save_settings()
+        self._rebuild_labels()
+
+    def _rebuild_labels(self):
+        # Rebuild only visible labels/buttons; state and background workers remain untouched.
+        self.root.title(APP_NAME)
+        self.lang_display.set("English" if self.language.get() == "en" else "Čeština")
+        self.tagline_label.configure(text=self.t("tagline"))
+        self.airport_label.configure(text=self.t("airport"))
+        self.heading_label.configure(text=self.t("status_title"))
+        self.notes_heading.configure(text=self.t("notes"))
+        self.community_heading.configure(text=self.t("community"))
+        for key, widget in self.card_label_widgets.items():
+            widget.configure(text=self.t(key))
+        self._refresh_local_version()
+        if self.release:
+            self.notes_text.configure(state="normal")
+            self.notes_text.delete("1.0", "end")
+            self.notes_text.insert("1.0", self.release.get("body") or self.t("no_notes"))
+            self.notes_text.configure(state="disabled")
+        self.browse_button.configure(text=self.t("browse"))
+        self.check_button.configure(text=self.t("check"))
+        self.install_button.configure(text=self.t("install"))
+        self.status_label.configure(text=self.status.get())
+        self.connection_label.configure(text="●  " + self.t("connected"))
+        self.footer_label.configure(text=self.t("footer"))
+        # Update static section headings by walking their known widgets.
+        for widget in self.root.winfo_children():
+            self._translate_tree(widget)
+
+    def _translate_tree(self, widget):
+        # Labels are tagged by their original English/Czech-independent role at creation.
+        key = getattr(widget, "_translation_key", None)
+        if key:
+            widget.configure(text=self.t(key))
+        for child in widget.winfo_children():
+            self._translate_tree(child)
+
+    def _load_settings_after_selection(self):
+        self._save_settings()
+        self._refresh_local_version()
+        self._update_button_state()
+
+    def browse_community(self):
+        selected = filedialog.askdirectory(title=self.t("select_title"))
+        if selected:
+            self.community.set(selected)
+            self._load_settings_after_selection()
 
     def _refresh_local_version(self):
         path = Path(self.community.get()) if self.community.get() else None
         version = read_local_version(path) if path else None
-        self.local_version.set(version if version else "Nenainstalováno / nezjištěno")
-
-    def browse_community(self):
-        selected = filedialog.askdirectory(title="Vyber MSFS Community složku")
-        if selected:
-            self.community.set(selected)
-            self._save_settings()
-            self._refresh_local_version()
-            self._update_button_state()
+        self.local_version.set(version if version else self.t("not_installed"))
 
     def _set_busy(self, busy: bool):
         if busy:
@@ -266,8 +432,9 @@ class UpdaterApp:
 
     def check_updates(self):
         self.install_button.configure(state="disabled")
-        self.status.set("Kontroluji dostupnou verzi…")
-        self.remote_version.set("Kontroluji…")
+        self.status.set(self.t("checking_status"))
+        self.status_label.configure(fg=CYAN)
+        self.remote_version.set(self.t("checking"))
         self._set_busy(True)
         threading.Thread(target=self._check_worker, daemon=True).start()
 
@@ -277,16 +444,14 @@ class UpdaterApp:
             tag = str(release.get("tag_name", "")).strip()
             version = tag[1:] if tag.lower().startswith("v") else tag
             if not re.fullmatch(r"\d+(?:\.\d+){1,3}", version):
-                raise ValueError(f"Neplatné číslo verze v GitHub Release: {tag!r}")
+                raise ValueError(self.t("bad_version").format(tag=tag))
             assets = release.get("assets", [])
             asset = next((a for a in assets if a.get("name") == ASSET_NAME), None)
             if not asset:
-                raise RuntimeError(
-                    f"V GitHub Release {tag} chybí soubor {ASSET_NAME}."
-                )
+                raise RuntimeError(self.t("missing_asset").format(tag=tag, asset=ASSET_NAME))
             self.events.put(("release_ok", release, asset, version))
         except Exception as exc:
-            self.events.put(("error", f"Kontrola aktualizací selhala: {exc}"))
+            self.events.put(("error", self.t("check_failed").format(error=exc)))
 
     def _update_button_state(self):
         if not self.release or not self.asset:
@@ -294,31 +459,22 @@ class UpdaterApp:
             return
         local = read_local_version(Path(self.community.get())) if self.community.get() else None
         remote = self.release.get("_version", "")
-        if not self.community.get():
-            self.install_button.configure(state="disabled")
-        elif not local or version_tuple(remote) > version_tuple(local):
-            self.install_button.configure(state="normal")
-        else:
-            self.install_button.configure(state="disabled")
+        enabled = bool(self.community.get()) and (not local or version_tuple(remote) > version_tuple(local))
+        self.install_button.configure(state="normal" if enabled else "disabled")
 
     def install_update(self):
         community = Path(self.community.get()) if self.community.get() else None
-        if not community or not community.is_dir():
-            messagebox.showwarning("Community složka", "Nejdřív vyber platnou Community složku.")
+        if not community or not safe_is_dir(community):
+            messagebox.showwarning(self.t("community_title"), self.t("choose_valid"))
             return
         if not self.asset:
-            messagebox.showwarning("Aktualizace", "Nejdřív zkontroluj dostupné aktualizace.")
+            messagebox.showwarning(self.t("update_title"), self.t("check_first"))
             return
-        if not messagebox.askyesno(
-            "Potvrdit instalaci",
-            "Před aktualizací MSFS úplně zavři.\n\n"
-            "Updater nahradí pouze složku:\n"
-            f"{ADDON_FOLDER}\n\n"
-            "Původní verzi ponechá jako zálohu. Pokračovat?"
-        ):
+        if not messagebox.askyesno(self.t("confirm_title"),
+                self.t("confirm").format(folder=ADDON_FOLDER)):
             return
         self.install_button.configure(state="disabled")
-        self.status.set("Stahuji aktualizaci…")
+        self.status.set(self.t("checking_status"))
         self._set_busy(True)
         threading.Thread(target=self._install_worker, args=(community,), daemon=True).start()
 
@@ -326,52 +482,40 @@ class UpdaterApp:
         try:
             APP_DATA.mkdir(parents=True, exist_ok=True)
             archive = APP_DATA / ASSET_NAME
-            url = self.asset["browser_download_url"]
-            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            req = urllib.request.Request(self.asset["browser_download_url"],
+                                         headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=60) as response, archive.open("wb") as target:
                 shutil.copyfileobj(response, target, length=1024 * 1024)
-
             expected_digest = self.asset.get("digest")
             if expected_digest and expected_digest.startswith("sha256:"):
-                digest = hashlib_sha256(archive)
-                if digest.lower() != expected_digest.split(":", 1)[1].lower():
-                    raise RuntimeError("Kontrola SHA-256 staženého ZIPu selhala.")
-
+                if hashlib_sha256(archive).lower() != expected_digest.split(":", 1)[1].lower():
+                    raise RuntimeError("SHA-256 verification failed.")
             with zipfile.ZipFile(archive, "r") as zf:
                 bad = zf.testzip()
                 if bad:
-                    raise RuntimeError(f"ZIP je poškozený (soubor {bad}).")
+                    raise RuntimeError(self.t("zip_bad").format(name=bad))
                 root_name = ADDON_FOLDER + "/"
                 names = zf.namelist()
-                if not names or any(
-                    name.startswith("/") or "\\" in name or
+                if not names or any(name.startswith("/") or "\\" in name or
                     ".." in PurePosixPath(name).parts or
-                    not (name == ADDON_FOLDER or name.startswith(root_name))
-                    for name in names
-                ):
-                    raise RuntimeError("ZIP nemá očekávanou bezpečnou strukturu.")
+                    not (name == ADDON_FOLDER or name.startswith(root_name)) for name in names):
+                    raise RuntimeError(self.t("zip_structure"))
                 stage = community / (".fidel-lkpr-staging-" + str(os.getpid()))
                 if stage.exists():
                     shutil.rmtree(stage)
                 stage.mkdir(parents=True)
                 zf.extractall(stage)
-
             staged_addon = stage / ADDON_FOLDER
             staged_version = read_manifest_version(staged_addon / "manifest.json")
             if staged_version != self.release["_version"]:
                 shutil.rmtree(stage, ignore_errors=True)
-                raise RuntimeError(
-                    f"Verze v ZIPu ({staged_version}) neodpovídá vydání "
-                    f"({self.release['_version']})."
-                )
-
-            target = community / ADDON_FOLDER
-            backup = None
+                raise RuntimeError(self.t("version_mismatch").format(
+                    actual=staged_version, expected=self.release["_version"]))
+            target, backup = community / ADDON_FOLDER, None
             if target.exists():
                 stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
                 backup = community / f"{ADDON_FOLDER}.backup-{stamp}"
                 target.rename(backup)
-
             try:
                 staged_addon.rename(target)
             except Exception:
@@ -380,22 +524,20 @@ class UpdaterApp:
                 raise
             finally:
                 shutil.rmtree(stage, ignore_errors=True)
-
             self.events.put(("install_ok", staged_version, str(backup) if backup else None))
         except Exception as exc:
-            self.events.put(("error", f"Instalace selhala: {exc}"))
+            self.events.put(("error", self.t("install_failed").format(error=exc)))
 
     def _poll_events(self):
         try:
             while True:
                 event = self.events.get_nowait()
-                kind = event[0]
-                if kind == "release_ok":
+                if event[0] == "release_ok":
                     _, release, asset, version = event
                     release["_version"] = version
                     self.release, self.asset = release, asset
                     self.remote_version.set(version)
-                    notes = release.get("body") or "K tomuto vydání nejsou připojené poznámky."
+                    notes = release.get("body") or self.t("no_notes")
                     self.notes_text.configure(state="normal")
                     self.notes_text.delete("1.0", "end")
                     self.notes_text.insert("1.0", notes)
@@ -403,28 +545,33 @@ class UpdaterApp:
                     self._refresh_local_version()
                     local = read_local_version(Path(self.community.get())) if self.community.get() else None
                     if not local:
-                        self.status.set("Scenérie není nalezena – můžeš provést první instalaci.")
+                        self.status.set(self.t("no_addon"))
+                        self.status_label.configure(fg=CYAN)
                     elif version_tuple(version) > version_tuple(local):
-                        self.status.set("Je dostupná nová verze. Čas na update! ✈")
+                        self.status.set(self.t("update"))
+                        self.status_label.configure(fg="#f4bd63")
                     else:
-                        self.status.set("Máš aktuální verzi scenérie.")
+                        self.status.set(self.t("uptodate"))
+                        self.status_label.configure(fg=GREEN)
                     self._set_busy(False)
                     self._update_button_state()
-                elif kind == "install_ok":
+                elif event[0] == "install_ok":
                     _, version, backup = event
                     self._set_busy(False)
                     self._refresh_local_version()
-                    self.status.set(f"Hotovo! Scenérie byla aktualizována na {version}.")
+                    self.status.set(self.t("done").format(version=version))
+                    self.status_label.configure(fg=GREEN)
                     self._update_button_state()
-                    msg = f"Instalace verze {version} proběhla úspěšně."
+                    msg = self.t("success").format(version=version)
                     if backup:
-                        msg += f"\n\nZáloha původní verze:\n{backup}"
-                    messagebox.showinfo("Instalace dokončena", msg)
-                elif kind == "error":
+                        msg += self.t("backup").format(path=backup)
+                    messagebox.showinfo(self.t("success_title"), msg)
+                elif event[0] == "error":
                     _, message = event
                     self._set_busy(False)
-                    self.status.set("Něco se nepovedlo.")
-                    messagebox.showerror("Fidel LKPR Updater", message)
+                    self.status.set(self.t("failed_status"))
+                    self.status_label.configure(fg="#ff8c8c")
+                    messagebox.showerror(APP_NAME, message)
                     self._update_button_state()
         except queue.Empty:
             pass

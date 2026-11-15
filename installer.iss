@@ -1,5 +1,5 @@
 #define MyAppName "Fidel LKPR Updater"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "Fidel"
 #define MyAppExeName "FidelLKPRUpdater.exe"
 
@@ -27,4 +27,4 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Spustit Fidel LKPR Updater"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch Fidel LKPR Updater"; Flags: postinstall nowait skipifsilent

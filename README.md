@@ -1,50 +1,24 @@
-# Fidel LKPR Updater
+# Fidel LKPR Updater 2.0
 
-Windows updater for the MSFS scenery package:
+Modern dark aviation-themed updater for `zzz_fidel-lkpr-live-tailstrike-edition`.
 
-`zzz_fidel-lkpr-live-tailstrike-edition`
-
-GitHub repository: https://github.com/fiideell/fidel-lkpr-updates
-
-## How updates are published
-
-The updater reads the latest **published GitHub Release** from this repository.
-
-For every scenery update:
-
-1. Create a GitHub Release with a tag such as `v3.0.1` or `v3.0.2`.
-2. Attach the scenery ZIP as a release asset. The asset filename must be exactly:
-   `zzz_fidel-lkpr-live-tailstrike-edition.zip`
-3. Put user-facing change notes in the Release description.
-4. Publish the Release (not draft).
-
-The scenery ZIP must contain one top-level folder named
-`zzz_fidel-lkpr-live-tailstrike-edition`, with `manifest.json` inside it.
-The `package_version` in that manifest must match the release tag.
+## What's new
+- Uses your supplied LKPR night screenshot as the wide header image.
+- English / Czech language switch (saved between launches).
+- Updated dashboard layout with version cards, release notes, Community folder and clear status.
+- Existing GitHub Releases update flow, ZIP validation, manifest version check and timestamped backup are retained.
 
 ## Build on Windows
-
-Requirements:
-- Windows 10 or 11
-- Python 3.11+ (check “Add Python to PATH” during installation)
-- Inno Setup 6 (only if you want to build the Setup installer)
+Requirements: Windows 10/11, Python 3.11+, Inno Setup 6 (for the installer).
 
 Run `build_windows.bat`. It creates:
-- `dist\FidelLKPRUpdater.exe` — portable standalone updater
-- `installer\Fidel_LKPR_Updater_Setup.exe` — installer, if Inno Setup 6 is installed
+- `dist\FidelLKPRUpdater.exe`
+- `installer\Fidel_LKPR_Updater_Setup.exe` (if Inno Setup 6 is installed)
 
-The app uses Python's built-in Tkinter and standard library; no runtime Python install is needed by users.
+The header image is bundled into the executable; end users do not need a separate image file.
 
-## Safety behaviour
+## Release requirements
+The latest GitHub Release must include the exact asset name:
+`zzz_fidel-lkpr-live-tailstrike-edition.zip`
 
-- The app only replaces the exact scenery folder named above.
-- It validates the ZIP structure and checks the scenery manifest version before replacing anything.
-- It creates a timestamped backup of the previous scenery folder.
-- If the final folder rename fails, it attempts to restore the backup.
-- Close Microsoft Flight Simulator before installing an update.
-- The first run may require the user to select the MSFS Community folder manually.
-
-## Important
-
-The first public GitHub Release still needs to be created manually and the scenery ZIP attached.
-Do not publish a Release until the attached ZIP and manifest version have been checked.
+The ZIP must contain one root folder named `zzz_fidel-lkpr-live-tailstrike-edition` and its `manifest.json` package_version must match the release tag.
