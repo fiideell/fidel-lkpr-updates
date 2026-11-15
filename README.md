@@ -1,11 +1,10 @@
 # FIDEL LKPR Live - updater
 
-## v10
-- Opens as a normal, non-maximized window at 1018 × 820 client pixels (approximately 1018 × 850 including the Windows title bar), matching the supplied reference size.
-- Window is intentionally fixed-size so the entire dashboard remains visible without manual resizing.
-- Uses a refreshed multi-resolution runway 24 ICO for the EXE, app window, installer and shortcuts.
-- EXE renamed to `FidelLKPRLiveUpdater.exe` to avoid Windows reusing the previous generic-icon executable/shortcut cache.
-- Language switching and header overlay layout from v9 retained.
+## v11 updates
+- Opens at 1018 × 850 client pixels to match the supplied screenshot.
+- Window remains resizable; minimum size is 900 × 760.
+- The green GitHub Releases connection footer is retained below the action buttons.
+- Installation download now streams in chunks and updates a determinate progress bar from 0% to 100%.
+- Keeps custom RWY 24 icon, language buttons and header layering.
 
-## Build
-Run `build_windows.bat` on Windows. It removes old build outputs and embeds the complete assets folder and `assets\app_icon.ico`.
+Build on Windows with `build_windows.bat`; install the newly generated Setup EXE.

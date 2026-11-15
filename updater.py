@@ -196,9 +196,9 @@ class UpdaterApp:
         self.root.title(APP_NAME)
         # Open in a normal, fixed-size window matching the user's reference screenshot.
         # 820px client height leaves room for the Windows title bar within ~850px total.
-        self.root.geometry("1018x820")
-        self.root.minsize(1018, 820)
-        self.root.resizable(False, False)
+        self.root.geometry("1018x850")
+        self.root.minsize(900, 760)
+        self.root.resizable(True, True)
         self.root.configure(bg=BG)
         try:
             self.app_icon = tk.PhotoImage(file=str(resource_path("assets/app_icon.png")))
@@ -384,8 +384,15 @@ class UpdaterApp:
                                        pady=8, cursor="hand2")
         self.browse_button.pack(side="left", padx=(8, 0))
 
-        self.progress = ttk.Progressbar(shell, mode="indeterminate")
-        self.progress.pack(fill="x", pady=(9, 0))
+        progress_row = tk.Frame(shell, bg=BG)
+        progress_row.pack(fill="x", pady=(9, 0))
+        self.progress = ttk.Progressbar(progress_row, mode="determinate",
+                                        maximum=100, value=0)
+        self.progress.pack(side="left", fill="x", expand=True)
+        self.progress_percent = tk.Label(progress_row, text="",
+                                          font=("Segoe UI", 8, "bold"),
+                                          fg=CYAN, bg=BG, width=5, anchor="e")
+        self.progress_percent.pack(side="right", padx=(8, 0))
         actions = tk.Frame(shell, bg=BG)
         actions.pack(fill="x", pady=(9, 0))
         self.check_button = tk.Button(actions, text=self.t("check"), command=self.check_updates,
@@ -497,9 +504,21 @@ class UpdaterApp:
 
     def _set_busy(self, busy: bool):
         if busy:
+            self.progress.configure(mode="indeterminate")
+            self.progress_percent.configure(text="")
             self.progress.start(10)
         else:
             self.progress.stop()
+            self.progress.configure(mode="determinate")
+            self.progress["value"] = 0
+            self.progress_percent.configure(text="")
+
+    def _set_download_progress(self, percent: int):
+        percent = max(0, min(100, int(percent)))
+        self.progress.stop()
+        self.progress.configure(mode="determinate")
+        self.progress["value"] = percent
+        self.progress_percent.configure(text=f"{percent}%")
 
     def check_updates(self):
         self.install_button.configure(state="disabled")
@@ -546,7 +565,10 @@ class UpdaterApp:
             return
         self.install_button.configure(state="disabled")
         self.status.set(self.t("checking_status"))
-        self._set_busy(True)
+        self.progress.stop()
+        self.progress.configure(mode="determinate")
+        self.progress["value"] = 0
+        self.progress_percent.configure(text="0%")
         threading.Thread(target=self._install_worker, args=(community,), daemon=True).start()
 
     def _install_worker(self, community: Path):
@@ -556,7 +578,18 @@ class UpdaterApp:
             req = urllib.request.Request(self.asset["browser_download_url"],
                                          headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=60) as response, archive.open("wb") as target:
-                shutil.copyfileobj(response, target, length=1024 * 1024)
+                total = int(response.headers.get("Content-Length") or 0)
+                downloaded = 0
+                while True:
+                    chunk = response.read(1024 * 256)
+                    if not chunk:
+                        break
+                    target.write(chunk)
+                    downloaded += len(chunk)
+                    if total > 0:
+                        pct = min(99, int(downloaded * 100 / total))
+                        self.events.put(("download_progress", pct))
+                self.events.put(("download_progress", 100))
             expected_digest = self.asset.get("digest")
             if expected_digest and expected_digest.startswith("sha256:"):
                 if hashlib_sha256(archive).lower() != expected_digest.split(":", 1)[1].lower():
@@ -603,7 +636,9 @@ class UpdaterApp:
         try:
             while True:
                 event = self.events.get_nowait()
-                if event[0] == "release_ok":
+                if event[0] == "download_progress":
+                    self._set_download_progress(event[1])
+                elif event[0] == "release_ok":
                     _, release, asset, version = event
                     release["_version"] = version
                     self.release, self.asset = release, asset
@@ -628,7 +663,10 @@ class UpdaterApp:
                     self._update_button_state()
                 elif event[0] == "install_ok":
                     _, version, backup = event
-                    self._set_busy(False)
+                    self.progress.stop()
+                    self.progress.configure(mode="determinate")
+                    self.progress["value"] = 100
+                    self.progress_percent.configure(text="100%")
                     self._refresh_local_version()
                     self.status.set(self.t("done").format(version=version))
                     self.status_label.configure(fg=GREEN)
