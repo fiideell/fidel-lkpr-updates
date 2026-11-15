@@ -200,7 +200,10 @@ class UpdaterApp:
         try:
             self.app_icon = tk.PhotoImage(file=str(resource_path("assets/app_icon.png")))
             self.root.iconphoto(True, self.app_icon)
-            self.root.iconbitmap(str(resource_path("assets/app_icon.ico")))
+        except (tk.TclError, OSError):
+            self.app_icon = None
+        try:
+            self.root.iconbitmap(default=str(resource_path("assets/app_icon.ico")))
         except (tk.TclError, OSError):
             pass
         self.root.state("normal")
@@ -264,16 +267,21 @@ class UpdaterApp:
         self.banner_photo = tk.PhotoImage(file=str(resource_path("assets/lkpr_header.png")))
         banner = tk.Label(shell, image=self.banner_photo, bd=0, bg=BG, compound="center")
         banner.pack(fill="x")
-        overlay = tk.Frame(banner, bg="#091321")
-        overlay.place(x=22, y=22)
+        self.banner_overlay = tk.Frame(banner, bg="#091321", bd=0,
+                                        highlightthickness=0)
+        self.banner_overlay.place(x=22, y=22)
+        overlay = self.banner_overlay
         title_row = tk.Frame(overlay, bg="#091321")
         title_row.pack(anchor="w")
-        tk.Label(title_row, text="FIDEL", font=("Segoe UI", 25, "bold"),
-                 fg=TEXT, bg="#091321").pack(side="left")
-        tk.Label(title_row, text=" LKPR", font=("Segoe UI", 25, "bold"),
-                 fg=CYAN, bg="#091321").pack(side="left")
-        tk.Label(title_row, text=" Live", font=("Segoe UI", 25, "bold"),
-                 fg=TEXT, bg="#091321").pack(side="left")
+        self.brand_fidel = tk.Label(title_row, text="FIDEL", font=("Segoe UI", 25, "bold"),
+                 fg=TEXT, bg="#091321")
+        self.brand_fidel.pack(side="left")
+        self.brand_lkpr = tk.Label(title_row, text=" LKPR", font=("Segoe UI", 25, "bold"),
+                 fg=CYAN, bg="#091321")
+        self.brand_lkpr.pack(side="left")
+        self.brand_live = tk.Label(title_row, text=" Live", font=("Segoe UI", 25, "bold"),
+                 fg=TEXT, bg="#091321")
+        self.brand_live.pack(side="left")
         self.edition_label = tk.Label(overlay, text="TAILSTRIKE EDITION",
                  font=("Segoe UI", 12, "bold"), fg="#ffffff", bg="#091321")
         self.edition_label.pack(anchor="w", pady=(1, 3))
@@ -303,6 +311,9 @@ class UpdaterApp:
         self.lang_en.pack(side="left")
         self.lang_cs.pack(side="left")
         self._style_language_buttons()
+        self.banner_overlay.lift()
+        self.airport_label.lift()
+        self.lang_frame.lift()
 
         heading = tk.Frame(shell, bg=BG)
         heading.pack(fill="x", pady=(4, 12))
@@ -420,6 +431,11 @@ class UpdaterApp:
         self._style_language_buttons()
         self.tagline_label.configure(
             text="SCENERY UPDATER for Microsoft Flight Simulator 2024")
+        # Tk can occasionally redraw the photo label over placed children on Windows.
+        # Explicitly restore the header overlays after a language switch.
+        self.banner_overlay.lift()
+        self.airport_label.lift()
+        self.lang_frame.lift()
         self.airport_label.configure(text=self.t("airport"))
         self.heading_label.configure(text=self.t("status_title"))
         self.notes_heading.configure(text=self.t("notes"))
