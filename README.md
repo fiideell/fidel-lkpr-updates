@@ -1,11 +1,11 @@
 # FIDEL LKPR Live - updater
 
-## v8 fixes
-- Keeps the FIDEL LKPR Live / TAILSTRIKE EDITION / simulator subtitle visible after switching language.
-- Explicitly raises the header text and language controls above the banner image after redraw.
-- Applies the runway 24 icon to the Tk window and embeds it in the Windows EXE and installer.
-- Bundles the complete assets folder.
+## v9 startup/layout fixes
+- Starts maximized after the native Windows window is created, so the complete dashboard and footer are visible on first launch.
+- Falls back to a screen-fitting window if maximize is unavailable.
+- Header image is now a background child of a dedicated frame; title, airport label and language buttons are separate sibling widgets layered above it. This prevents the branding from disappearing after language changes.
+- Reduced vertical spacing slightly to fit more comfortably on smaller displays.
+- Keeps the runway 24 icon, flag assets, original LKPR photo, GitHub update/install and backup logic.
 
-## Important clean rebuild
-Close the updater. Run `build_windows.bat`; it deletes old `build` and `dist` folders before rebuilding.
-Install the newly generated `installer\Fidel_LKPR_Updater_Setup.exe` to replace the previous build.
+## Build
+Run `build_windows.bat` on Windows. It cleans old `build` and `dist` directories and embeds all assets and the custom icon.

@@ -194,7 +194,9 @@ class UpdaterApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(APP_NAME)
-        self.root.geometry("1043x875")
+        # Start maximized: the complete dashboard, including the bottom controls,
+        # is visible immediately instead of opening taller than the available work area.
+        self.root.geometry("1100x800")
         self.root.minsize(940, 700)
         self.root.configure(bg=BG)
         try:
@@ -207,6 +209,9 @@ class UpdaterApp:
         except (tk.TclError, OSError):
             pass
         self.root.state("normal")
+        # Apply after Tk has created the native window; Windows otherwise may ignore
+        # an early zoomed state during startup.
+        self.root.after(120, self._maximize_on_start)
         self.events: queue.Queue = queue.Queue()
         self.release = None
         self.asset = None
@@ -223,6 +228,17 @@ class UpdaterApp:
         self._refresh_local_version()
         self.root.after(150, self._poll_events)
         self.check_updates()
+
+    def _maximize_on_start(self):
+        try:
+            self.root.state("zoomed")
+        except tk.TclError:
+            # Fallback: fit inside the usable screen area, leaving room for taskbar.
+            sw = self.root.winfo_screenwidth()
+            sh = self.root.winfo_screenheight()
+            width = min(1200, sw - 40)
+            height = min(950, sh - 80)
+            self.root.geometry(f"{width}x{height}+10+10")
 
     def t(self, key: str) -> str:
         return self.STRINGS[self.lang_code].get(key, key)
@@ -260,13 +276,19 @@ class UpdaterApp:
                         background=CYAN, bordercolor="#203047",
                         lightcolor=CYAN, darkcolor=CYAN)
 
-        shell = tk.Frame(self.root, bg=BG, padx=22, pady=20)
+        shell = tk.Frame(self.root, bg=BG, padx=18, pady=14)
         shell.pack(fill="both", expand=True)
 
-        # Wide LKPR photo banner. The original airport screenshot is bundled in the EXE.
+        # Header is a Frame with a separate background-image Label. Text and controls
+        # are sibling widgets above the image, so switching language cannot cover them.
         self.banner_photo = tk.PhotoImage(file=str(resource_path("assets/lkpr_header.png")))
-        banner = tk.Label(shell, image=self.banner_photo, bd=0, bg=BG, compound="center")
+        banner = tk.Frame(shell, bg=BG, height=self.banner_photo.height(),
+                          width=self.banner_photo.width(), bd=0, highlightthickness=0)
         banner.pack(fill="x")
+        banner.pack_propagate(False)
+        self.banner_background = tk.Label(banner, image=self.banner_photo,
+                                           bd=0, bg=BG, highlightthickness=0)
+        self.banner_background.place(x=0, y=0, relwidth=1, relheight=1)
         self.banner_overlay = tk.Frame(banner, bg="#091321", bd=0,
                                         highlightthickness=0)
         self.banner_overlay.place(x=22, y=22)
@@ -311,6 +333,7 @@ class UpdaterApp:
         self.lang_en.pack(side="left")
         self.lang_cs.pack(side="left")
         self._style_language_buttons()
+        self.banner_background.lower()
         self.banner_overlay.lift()
         self.airport_label.lift()
         self.lang_frame.lift()
@@ -332,7 +355,7 @@ class UpdaterApp:
 
         self.status_panel = tk.Frame(shell, bg=PANEL, highlightthickness=1,
                                      highlightbackground=BORDER, padx=16, pady=12)
-        self.status_panel.pack(fill="x", pady=(12, 12))
+        self.status_panel.pack(fill="x", pady=(9, 9))
         self.status_icon = tk.Label(self.status_panel, text="●", font=("Segoe UI", 18, "bold"),
                                     fg=CYAN, bg=PANEL)
         self.status_icon.pack(side="left", padx=(0, 12))
@@ -343,7 +366,7 @@ class UpdaterApp:
 
         notes = tk.Frame(shell, bg=PANEL, highlightthickness=1,
                          highlightbackground=BORDER, padx=16, pady=12)
-        notes.pack(fill="both", expand=True)
+        notes.pack(fill="both", expand=True, pady=(0, 0))
         self.notes_heading = tk.Label(notes, text=self.t("notes"), font=("Segoe UI", 8, "bold"),
                  fg=MUTED, bg=PANEL)
         self.notes_heading.pack(anchor="w")
@@ -356,7 +379,7 @@ class UpdaterApp:
         self.notes_text.configure(state="disabled")
 
         pathbox = tk.Frame(shell, bg=BG)
-        pathbox.pack(fill="x", pady=(14, 0))
+        pathbox.pack(fill="x", pady=(9, 0))
         self.community_heading = tk.Label(pathbox, text=self.t("community"), font=("Segoe UI", 8, "bold"),
                  fg=MUTED, bg=BG)
         self.community_heading.pack(anchor="w", pady=(0, 6))
@@ -373,9 +396,9 @@ class UpdaterApp:
         self.browse_button.pack(side="left", padx=(8, 0))
 
         self.progress = ttk.Progressbar(shell, mode="indeterminate")
-        self.progress.pack(fill="x", pady=(14, 0))
+        self.progress.pack(fill="x", pady=(9, 0))
         actions = tk.Frame(shell, bg=BG)
-        actions.pack(fill="x", pady=(14, 0))
+        actions.pack(fill="x", pady=(9, 0))
         self.check_button = tk.Button(actions, text=self.t("check"), command=self.check_updates,
                                       bg=PANEL2, fg=TEXT, activebackground=BORDER,
                                       activeforeground=TEXT, relief="flat", padx=18,
@@ -388,7 +411,7 @@ class UpdaterApp:
                                         padx=20, pady=12, cursor="hand2", state="disabled")
         self.install_button.pack(side="right")
         foot = tk.Frame(shell, bg=BG)
-        foot.pack(fill="x", pady=(13, 0))
+        foot.pack(fill="x", pady=(8, 0))
         self.connection_label = tk.Label(foot, text="●  " + self.t("connected"),
                                          font=("Segoe UI", 8), fg=GREEN, bg=BG)
         self.connection_label.pack(side="left")
@@ -433,6 +456,7 @@ class UpdaterApp:
             text="SCENERY UPDATER for Microsoft Flight Simulator 2024")
         # Tk can occasionally redraw the photo label over placed children on Windows.
         # Explicitly restore the header overlays after a language switch.
+        self.banner_background.lower()
         self.banner_overlay.lift()
         self.airport_label.lift()
         self.lang_frame.lift()
