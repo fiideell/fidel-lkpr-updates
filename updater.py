@@ -308,7 +308,7 @@ class UpdaterApp:
         # Compact flag buttons instead of the native ttk combobox.
         self.lang_frame = tk.Frame(banner, bg="#101b2b",
                                    highlightthickness=1, highlightbackground="#50647d")
-        self.lang_frame.place(relx=1.0, x=-16, y=66, anchor="ne")
+        self.lang_frame.place(relx=1.0, rely=1.0, x=-16, y=-12, anchor="se")
         self.flag_uk_photo = tk.PhotoImage(file=str(resource_path("assets/flag_uk.png")))
         self.flag_cz_photo = tk.PhotoImage(file=str(resource_path("assets/flag_cz.png")))
         self.lang_en = tk.Button(self.lang_frame, text="  EN",
