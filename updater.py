@@ -196,8 +196,8 @@ class UpdaterApp:
         self.root.title(APP_NAME)
         # Open in a normal, fixed-size window matching the user's reference screenshot.
         # 820px client height leaves room for the Windows title bar within ~850px total.
-        self.root.geometry("1018x850")
-        self.root.minsize(900, 760)
+        self.root.geometry("1018x790")
+        self.root.minsize(900, 700)
         self.root.resizable(True, True)
         self.root.configure(bg=BG)
         try:
@@ -265,7 +265,7 @@ class UpdaterApp:
                         background=CYAN, bordercolor="#203047",
                         lightcolor=CYAN, darkcolor=CYAN)
 
-        shell = tk.Frame(self.root, bg=BG, padx=18, pady=14)
+        shell = tk.Frame(self.root, bg=BG, padx=16, pady=10)
         shell.pack(fill="both", expand=True)
 
         # Header is a Frame with a separate background-image Label. Text and controls
@@ -328,7 +328,7 @@ class UpdaterApp:
         self.lang_frame.lift()
 
         heading = tk.Frame(shell, bg=BG)
-        heading.pack(fill="x", pady=(4, 12))
+        heading.pack(fill="x", pady=(3, 8))
         tk.Label(heading, text="▤", font=("Segoe UI Symbol", 18),
                  fg=CYAN, bg=BG).pack(side="left", padx=(0, 9))
         self.heading_label = tk.Label(heading, text=self.t("status_title"), font=("Segoe UI", 12, "bold"),
@@ -344,7 +344,7 @@ class UpdaterApp:
 
         self.status_panel = tk.Frame(shell, bg=PANEL, highlightthickness=1,
                                      highlightbackground=BORDER, padx=16, pady=12)
-        self.status_panel.pack(fill="x", pady=(9, 9))
+        self.status_panel.pack(fill="x", pady=(7, 7))
         self.status_icon = tk.Label(self.status_panel, text="●", font=("Segoe UI", 18, "bold"),
                                     fg=CYAN, bg=PANEL)
         self.status_icon.pack(side="left", padx=(0, 12))
@@ -359,7 +359,7 @@ class UpdaterApp:
         self.notes_heading = tk.Label(notes, text=self.t("notes"), font=("Segoe UI", 8, "bold"),
                  fg=MUTED, bg=PANEL)
         self.notes_heading.pack(anchor="w")
-        self.notes_text = tk.Text(notes, height=5, wrap="word", relief="flat",
+        self.notes_text = tk.Text(notes, height=3, wrap="word", relief="flat",
                                   bg=PANEL, fg="#d8e3ef", insertbackground=TEXT,
                                   font=("Segoe UI", 9), padx=0, pady=8,
                                   highlightthickness=0)
@@ -368,7 +368,7 @@ class UpdaterApp:
         self.notes_text.configure(state="disabled")
 
         pathbox = tk.Frame(shell, bg=BG)
-        pathbox.pack(fill="x", pady=(9, 0))
+        pathbox.pack(fill="x", pady=(7, 0))
         self.community_heading = tk.Label(pathbox, text=self.t("community"), font=("Segoe UI", 8, "bold"),
                  fg=MUTED, bg=BG)
         self.community_heading.pack(anchor="w", pady=(0, 6))
@@ -385,7 +385,7 @@ class UpdaterApp:
         self.browse_button.pack(side="left", padx=(8, 0))
 
         progress_row = tk.Frame(shell, bg=BG)
-        progress_row.pack(fill="x", pady=(9, 0))
+        progress_row.pack(fill="x", pady=(7, 0))
         self.progress = ttk.Progressbar(progress_row, mode="determinate",
                                         maximum=100, value=0)
         self.progress.pack(side="left", fill="x", expand=True)
@@ -394,7 +394,7 @@ class UpdaterApp:
                                           fg=CYAN, bg=BG, width=5, anchor="e")
         self.progress_percent.pack(side="right", padx=(8, 0))
         actions = tk.Frame(shell, bg=BG)
-        actions.pack(fill="x", pady=(9, 0))
+        actions.pack(fill="x", pady=(7, 0))
         self.check_button = tk.Button(actions, text=self.t("check"), command=self.check_updates,
                                       bg=PANEL2, fg=TEXT, activebackground=BORDER,
                                       activeforeground=TEXT, relief="flat", padx=18,
@@ -407,7 +407,7 @@ class UpdaterApp:
                                         padx=20, pady=12, cursor="hand2", state="disabled")
         self.install_button.pack(side="right")
         foot = tk.Frame(shell, bg=BG)
-        foot.pack(fill="x", pady=(8, 0))
+        foot.pack(side="bottom", fill="x", pady=(7, 0))
         self.connection_label = tk.Label(foot, text="●  " + self.t("connected"),
                                          font=("Segoe UI", 8), fg=GREEN, bg=BG)
         self.connection_label.pack(side="left")
