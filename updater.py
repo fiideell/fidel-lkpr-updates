@@ -197,6 +197,10 @@ class UpdaterApp:
         self.root.geometry("1100x790")
         self.root.minsize(940, 700)
         self.root.configure(bg=BG)
+        try:
+            self.root.state("zoomed")
+        except tk.TclError:
+            pass
         self.events: queue.Queue = queue.Queue()
         self.release = None
         self.asset = None
@@ -258,34 +262,41 @@ class UpdaterApp:
         banner = tk.Label(shell, image=self.banner_photo, bd=0, bg=BG, compound="center")
         banner.pack(fill="x")
         overlay = tk.Frame(banner, bg="#091321")
-        overlay.place(x=28, y=28)
+        overlay.place(x=22, y=22)
         title_row = tk.Frame(overlay, bg="#091321")
         title_row.pack(anchor="w")
-        tk.Label(title_row, text="FIDEL", font=("Segoe UI", 27, "bold"),
+        tk.Label(title_row, text="FIDEL", font=("Segoe UI", 25, "bold"),
                  fg=TEXT, bg="#091321").pack(side="left")
-        tk.Label(title_row, text=" LKPR", font=("Segoe UI", 27, "bold"),
+        tk.Label(title_row, text=" LKPR", font=("Segoe UI", 25, "bold"),
                  fg=CYAN, bg="#091321").pack(side="left")
-        self.edition_label = tk.Label(overlay, text="LIVE TAILSTRIKE EDITION",
-                 font=("Segoe UI", 13, "bold"), fg="#ffffff", bg="#091321")
-        self.edition_label.pack(anchor="w", pady=(1, 5))
-        self.tagline_label = tk.Label(overlay, text=self.t("tagline"),
+        tk.Label(title_row, text=" Live", font=("Segoe UI", 25, "bold"),
+                 fg=TEXT, bg="#091321").pack(side="left")
+        self.edition_label = tk.Label(overlay, text="TAILSTRIKE EDITION",
+                 font=("Segoe UI", 12, "bold"), fg="#ffffff", bg="#091321")
+        self.edition_label.pack(anchor="w", pady=(1, 3))
+        self.tagline_label = tk.Label(overlay,
+                 text="SCENERY UPDATER for Microsoft Flight Simulator 2024",
                  font=("Segoe UI", 8, "bold"), fg="#d2deeb", bg="#091321")
         self.tagline_label.pack(anchor="w")
         self.airport_label = tk.Label(banner, text=self.t("airport"),
                  font=("Segoe UI", 9, "bold"), fg=TEXT, bg="#142033",
                  padx=11, pady=7)
-        self.airport_label.place(relx=1.0, x=-20, y=22, anchor="ne")
+        self.airport_label.place(relx=1.0, x=-16, y=16, anchor="ne")
 
         # Compact flag buttons instead of the native ttk combobox.
         self.lang_frame = tk.Frame(banner, bg="#101b2b",
                                    highlightthickness=1, highlightbackground="#50647d")
-        self.lang_frame.place(relx=1.0, x=-20, y=75, anchor="ne")
-        self.lang_en = tk.Button(self.lang_frame, text="🇬🇧  EN",
+        self.lang_frame.place(relx=1.0, x=-16, y=66, anchor="ne")
+        self.flag_uk_photo = tk.PhotoImage(file=str(resource_path("assets/flag_uk.png")))
+        self.flag_cz_photo = tk.PhotoImage(file=str(resource_path("assets/flag_cz.png")))
+        self.lang_en = tk.Button(self.lang_frame, text="  EN",
+                 image=self.flag_uk_photo, compound="left",
                  command=lambda: self._set_language("en"), font=("Segoe UI", 9, "bold"),
-                 relief="flat", bd=0, padx=12, pady=7, cursor="hand2")
-        self.lang_cs = tk.Button(self.lang_frame, text="🇨🇿  CZ",
+                 relief="flat", bd=0, padx=10, pady=7, cursor="hand2")
+        self.lang_cs = tk.Button(self.lang_frame, text="  CZ",
+                 image=self.flag_cz_photo, compound="left",
                  command=lambda: self._set_language("cs"), font=("Segoe UI", 9, "bold"),
-                 relief="flat", bd=0, padx=12, pady=7, cursor="hand2")
+                 relief="flat", bd=0, padx=10, pady=7, cursor="hand2")
         self.lang_en.pack(side="left")
         self.lang_cs.pack(side="left")
         self._style_language_buttons()
@@ -404,7 +415,8 @@ class UpdaterApp:
         # Rebuild only visible labels/buttons; state and background workers remain untouched.
         self.root.title(APP_NAME)
         self._style_language_buttons()
-        self.tagline_label.configure(text=self.t("tagline"))
+        self.tagline_label.configure(
+            text="SCENERY UPDATER for Microsoft Flight Simulator 2024")
         self.airport_label.configure(text=self.t("airport"))
         self.heading_label.configure(text=self.t("status_title"))
         self.notes_heading.configure(text=self.t("notes"))
