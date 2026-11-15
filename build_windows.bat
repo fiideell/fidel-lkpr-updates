@@ -15,7 +15,7 @@ py -m pip install --upgrade pyinstaller
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 py -m PyInstaller --noconfirm --clean --onefile --windowed ^
-  --add-data "assets\lkpr_header.png;assets" ^
+  --add-data "assets;assets" ^
   --name FidelLKPRUpdater updater.py
 if errorlevel 1 (
   echo Build failed.

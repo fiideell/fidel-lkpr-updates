@@ -1,12 +1,16 @@
-# Fidel LKPR Updater — refreshed header build
+# Fidel LKPR Updater — Windows build
 
-## Changes
-- Opens maximized on launch so the bottom controls are visible immediately.
-- Uses the newly supplied compact LKPR runway header image.
-- Header branding: FIDEL LKPR Live / TAILSTRIKE EDITION / SCENERY UPDATER for Microsoft Flight Simulator 2024.
-- Uses bundled UK and Czech flag PNGs on the language buttons (not emoji), so flags render consistently on Windows.
-- Keeps the GitHub release check, download, archive validation, manifest version check and backup installation flow.
+This package contains the updater source and all bundled image assets.
 
 ## Build
-On Windows with Python and Inno Setup 6 installed, run `build_windows.bat`.
-The EXE bundles `assets/lkpr_header.png`, `assets/flag_uk.png`, and `assets/flag_cz.png`.
+On Windows, run `build_windows.bat`.
+
+The PyInstaller build includes the complete `assets` folder:
+- `lkpr_header.png`
+- `flag_uk.png`
+- `flag_cz.png`
+
+This is important: the executable must contain all three images, not just the header.
+The app opens maximized and has English/Czech flag buttons.
+
+The installer is produced with Inno Setup 6 when installed.
