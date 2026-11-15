@@ -132,14 +132,13 @@ class UpdaterApp:
             "confirm_title": "Confirm installation",
             "confirm": "Please completely close MSFS before continuing.\n\n"
                        "The updater will replace only this scenery folder:\n{folder}\n\n"
-                       "Your previous version will be kept as a backup. Continue?",
+                       "The previous version will be removed after the new version is installed. Continue?",
             "zip_bad": "The ZIP archive is damaged (file {name}).",
             "zip_structure": "The ZIP does not have the expected safe folder structure.",
             "version_mismatch": "The version in the ZIP ({actual}) does not match the release ({expected}).",
             "install_failed": "Installation failed: {error}",
             "success_title": "Installation complete",
             "success": "Version {version} was installed successfully.",
-            "backup": "\n\nBackup of the previous version:\n{path}",
             "no_notes": "No release notes were provided.",
             "status_ok": "You are up to date",
             "status_new": "Update available",
@@ -175,14 +174,13 @@ class UpdaterApp:
             "confirm_title": "Potvrdit instalaci",
             "confirm": "Před pokračováním úplně zavři MSFS.\n\n"
                        "Updater nahradí pouze tuto složku scenérie:\n{folder}\n\n"
-                       "Původní verzi ponechá jako zálohu. Pokračovat?",
+                       "Po instalaci nové verze bude původní verze odstraněna. Pokračovat?",
             "zip_bad": "ZIP archiv je poškozený (soubor {name}).",
             "zip_structure": "ZIP nemá očekávanou bezpečnou strukturu.",
             "version_mismatch": "Verze v ZIPu ({actual}) neodpovídá vydání ({expected}).",
             "install_failed": "Instalace selhala: {error}",
             "success_title": "Instalace dokončena",
             "success": "Instalace verze {version} proběhla úspěšně.",
-            "backup": "\n\nZáloha původní verze:\n{path}",
             "no_notes": "K tomuto vydání nejsou připojené poznámky.",
             "status_ok": "Máš aktuální verzi",
             "status_new": "Dostupná aktualizace",
@@ -615,20 +613,43 @@ class UpdaterApp:
                 shutil.rmtree(stage, ignore_errors=True)
                 raise RuntimeError(self.t("version_mismatch").format(
                     actual=staged_version, expected=self.release["_version"]))
-            target, backup = community / ADDON_FOLDER, None
+            target, previous = community / ADDON_FOLDER, None
             if target.exists():
-                stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-                backup = community / f"{ADDON_FOLDER}.backup-{stamp}"
-                target.rename(backup)
+                # Temporarily move the old version out of the way only after the
+                # new archive has been downloaded, validated and extracted.
+                previous = community / (".fidel-lkpr-old-" + str(os.getpid()))
+                if previous.exists():
+                    shutil.rmtree(previous)
+                target.rename(previous)
             try:
                 staged_addon.rename(target)
             except Exception:
-                if backup and backup.exists() and not target.exists():
-                    backup.rename(target)
+                if previous and previous.exists() and not target.exists():
+                    previous.rename(target)
                 raise
+            else:
+                # Keep Community clean: remove the previous version after the
+                # new folder is in place. If cleanup fails, roll back where possible.
+                if previous and previous.exists():
+                    try:
+                        shutil.rmtree(previous)
+                    except Exception as cleanup_error:
+                        try:
+                            shutil.rmtree(target)
+                            previous.rename(target)
+                        except Exception as rollback_error:
+                            raise RuntimeError(
+                                "Could not remove the previous version and automatic rollback failed. "
+                                f"Previous folder: {previous}; new folder: {target}; "
+                                f"cleanup error: {cleanup_error}; rollback error: {rollback_error}"
+                            ) from cleanup_error
+                        raise RuntimeError(
+                            "Could not remove the previous version. The original version was restored. "
+                            f"Details: {cleanup_error}"
+                        ) from cleanup_error
             finally:
                 shutil.rmtree(stage, ignore_errors=True)
-            self.events.put(("install_ok", staged_version, str(backup) if backup else None))
+            self.events.put(("install_ok", staged_version))
         except Exception as exc:
             self.events.put(("error", self.t("install_failed").format(error=exc)))
 
@@ -662,7 +683,7 @@ class UpdaterApp:
                     self._set_busy(False)
                     self._update_button_state()
                 elif event[0] == "install_ok":
-                    _, version, backup = event
+                    _, version = event
                     self.progress.stop()
                     self.progress.configure(mode="determinate")
                     self.progress["value"] = 100
@@ -672,8 +693,6 @@ class UpdaterApp:
                     self.status_label.configure(fg=GREEN)
                     self._update_button_state()
                     msg = self.t("success").format(version=version)
-                    if backup:
-                        msg += self.t("backup").format(path=backup)
                     messagebox.showinfo(self.t("success_title"), msg)
                 elif event[0] == "error":
                     _, message = event
