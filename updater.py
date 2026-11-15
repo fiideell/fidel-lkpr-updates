@@ -17,7 +17,7 @@ OWNER = "fiideell"
 REPO = "fidel-lkpr-updates"
 ADDON_FOLDER = "zzz_fidel-lkpr-live-tailstrike-edition"
 ASSET_NAME = ADDON_FOLDER + ".zip"
-APP_NAME = "Fidel LKPR Updater"
+APP_NAME = "FIDEL LKPR Live - updater"
 API_URL = f"https://api.github.com/repos/{OWNER}/{REPO}/releases/latest"
 USER_AGENT = "Fidel-LKPR-Updater/2.0"
 APP_DATA = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "FidelLKPRUpdater"
@@ -194,13 +194,16 @@ class UpdaterApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(APP_NAME)
-        self.root.geometry("1100x790")
+        self.root.geometry("1043x875")
         self.root.minsize(940, 700)
         self.root.configure(bg=BG)
         try:
-            self.root.state("zoomed")
-        except tk.TclError:
+            self.app_icon = tk.PhotoImage(file=str(resource_path("assets/app_icon.png")))
+            self.root.iconphoto(True, self.app_icon)
+            self.root.iconbitmap(str(resource_path("assets/app_icon.ico")))
+        except (tk.TclError, OSError):
             pass
+        self.root.state("normal")
         self.events: queue.Queue = queue.Queue()
         self.release = None
         self.asset = None
@@ -292,11 +295,11 @@ class UpdaterApp:
         self.lang_en = tk.Button(self.lang_frame, text="  EN",
                  image=self.flag_uk_photo, compound="left",
                  command=lambda: self._set_language("en"), font=("Segoe UI", 9, "bold"),
-                 relief="flat", bd=0, padx=10, pady=7, cursor="hand2")
+                 relief="flat", bd=0, padx=7, pady=4, cursor="hand2")
         self.lang_cs = tk.Button(self.lang_frame, text="  CZ",
                  image=self.flag_cz_photo, compound="left",
                  command=lambda: self._set_language("cs"), font=("Segoe UI", 9, "bold"),
-                 relief="flat", bd=0, padx=10, pady=7, cursor="hand2")
+                 relief="flat", bd=0, padx=7, pady=4, cursor="hand2")
         self.lang_en.pack(side="left")
         self.lang_cs.pack(side="left")
         self._style_language_buttons()

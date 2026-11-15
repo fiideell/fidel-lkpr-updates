@@ -1,16 +1,12 @@
-# Fidel LKPR Updater — Windows build
+# FIDEL LKPR Live - updater
 
-This package contains the updater source and all bundled image assets.
+Windows updater for the Fidel LKPR Live Tailstrike Edition scenery.
+
+## Branding
+- Application/window name: **FIDEL LKPR Live - updater**
+- Custom runway 24 application icon (EXE, installer, window and taskbar)
+- Original LKPR header photograph and English/Czech flag assets
 
 ## Build
-On Windows, run `build_windows.bat`.
-
-The PyInstaller build includes the complete `assets` folder:
-- `lkpr_header.png`
-- `flag_uk.png`
-- `flag_cz.png`
-
-This is important: the executable must contain all three images, not just the header.
-The app opens maximized and has English/Czech flag buttons.
-
-The installer is produced with Inno Setup 6 when installed.
+Run `build_windows.bat` on Windows with Python and Inno Setup 6 installed.
+The script bundles the complete `assets` directory and embeds `assets\app_icon.ico` as the executable icon.
