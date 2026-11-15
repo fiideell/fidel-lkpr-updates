@@ -1,7 +1,7 @@
 #define MyAppName "FIDEL LKPR Live - updater"
 #define MyAppVersion "2.0.0"
 #define MyAppPublisher "Fidel"
-#define MyAppExeName "FidelLKPRUpdater.exe"
+#define MyAppExeName "FidelLKPRLiveUpdater.exe"
 
 [Setup]
 AppId={{A4A4B671-9E66-4B7E-9D58-6C2D53D1AFA1}
@@ -24,8 +24,8 @@ PrivilegesRequired=lowest
 Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch FIDEL LKPR Live - updater"; Flags: postinstall nowait skipifsilent

@@ -194,10 +194,11 @@ class UpdaterApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(APP_NAME)
-        # Start maximized: the complete dashboard, including the bottom controls,
-        # is visible immediately instead of opening taller than the available work area.
-        self.root.geometry("1100x800")
-        self.root.minsize(940, 700)
+        # Open in a normal, fixed-size window matching the user's reference screenshot.
+        # 820px client height leaves room for the Windows title bar within ~850px total.
+        self.root.geometry("1018x820")
+        self.root.minsize(1018, 820)
+        self.root.resizable(False, False)
         self.root.configure(bg=BG)
         try:
             self.app_icon = tk.PhotoImage(file=str(resource_path("assets/app_icon.png")))
@@ -205,13 +206,12 @@ class UpdaterApp:
         except (tk.TclError, OSError):
             self.app_icon = None
         try:
-            self.root.iconbitmap(default=str(resource_path("assets/app_icon.ico")))
+            ico_file = str(resource_path("assets/app_icon.ico"))
+            self.root.iconbitmap(ico_file)
+            self.root.wm_iconbitmap(ico_file)
         except (tk.TclError, OSError):
             pass
         self.root.state("normal")
-        # Apply after Tk has created the native window; Windows otherwise may ignore
-        # an early zoomed state during startup.
-        self.root.after(120, self._maximize_on_start)
         self.events: queue.Queue = queue.Queue()
         self.release = None
         self.asset = None
@@ -228,17 +228,6 @@ class UpdaterApp:
         self._refresh_local_version()
         self.root.after(150, self._poll_events)
         self.check_updates()
-
-    def _maximize_on_start(self):
-        try:
-            self.root.state("zoomed")
-        except tk.TclError:
-            # Fallback: fit inside the usable screen area, leaving room for taskbar.
-            sw = self.root.winfo_screenwidth()
-            sh = self.root.winfo_screenheight()
-            width = min(1200, sw - 40)
-            height = min(950, sh - 80)
-            self.root.geometry(f"{width}x{height}+10+10")
 
     def t(self, key: str) -> str:
         return self.STRINGS[self.lang_code].get(key, key)

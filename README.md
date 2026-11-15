@@ -1,11 +1,11 @@
 # FIDEL LKPR Live - updater
 
-## v9 startup/layout fixes
-- Starts maximized after the native Windows window is created, so the complete dashboard and footer are visible on first launch.
-- Falls back to a screen-fitting window if maximize is unavailable.
-- Header image is now a background child of a dedicated frame; title, airport label and language buttons are separate sibling widgets layered above it. This prevents the branding from disappearing after language changes.
-- Reduced vertical spacing slightly to fit more comfortably on smaller displays.
-- Keeps the runway 24 icon, flag assets, original LKPR photo, GitHub update/install and backup logic.
+## v10
+- Opens as a normal, non-maximized window at 1018 × 820 client pixels (approximately 1018 × 850 including the Windows title bar), matching the supplied reference size.
+- Window is intentionally fixed-size so the entire dashboard remains visible without manual resizing.
+- Uses a refreshed multi-resolution runway 24 ICO for the EXE, app window, installer and shortcuts.
+- EXE renamed to `FidelLKPRLiveUpdater.exe` to avoid Windows reusing the previous generic-icon executable/shortcut cache.
+- Language switching and header overlay layout from v9 retained.
 
 ## Build
-Run `build_windows.bat` on Windows. It cleans old `build` and `dist` directories and embeds all assets and the custom icon.
+Run `build_windows.bat` on Windows. It removes old build outputs and embeds the complete assets folder and `assets\app_icon.ico`.

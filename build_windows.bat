@@ -17,14 +17,14 @@ if exist dist rmdir /s /q dist
 py -m PyInstaller --noconfirm --clean --onefile --windowed ^
   --add-data "assets;assets" ^
   --icon "assets\app_icon.ico" ^
-  --name FidelLKPRUpdater updater.py
+  --name FidelLKPRLiveUpdater updater.py
 if errorlevel 1 (
   echo Build failed.
   pause
   exit /b 1
 )
 echo.
-echo Portable app created: dist\FidelLKPRUpdater.exe
+echo Portable app created: dist\FidelLKPRLiveUpdater.exe
 set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
 if not exist "%ISCC%" set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
 if exist "%ISCC%" (
